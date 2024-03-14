@@ -1,0 +1,5 @@
+After running 'MAIN_AdaptiveParadigm', this folder will contain
+- 1) all psychometric results in a mat file;
+- 2) all logistic-regression-model results in a mat file;
+- 3) all mixed-effects-logistic-regression-model results in a mat file;
+- 4) figures (Fig. 3B, & Suppl. Fig. 5) presented in the paper in jpg format.
