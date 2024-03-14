@@ -7,5 +7,5 @@ Following these 3 steps to run the 'MAIN_*' codes:
 2) Make sure you have the toolbox 'psignifit' on your computer, or download it from the following link (and add to matlab paths): https://github.com/wichmann-lab/psignifit/archive/master.zip
    - This is the version (psignifit 4) we used in this study.
 
-3) Open and run the MAIN_AdaptiveParadigm.m (or the MAIN_RegularParadigm.m) to analyze the data in the adaptive paradigm (or the regular paradigm).
+3) Open and run the m file MAIN_AdaptiveParadigm (or MAIN_RegularParadigm) to analyze the data in the adaptive paradigm (or the regular paradigm).
    - The calculated results and plotted figures will be saved in the Results folder.
