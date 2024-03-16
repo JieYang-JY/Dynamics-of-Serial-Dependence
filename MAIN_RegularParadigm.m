@@ -269,6 +269,12 @@ for k = 1:length(monkey) % per monkey
         LogRegModel_monks.sm_Beta_prevStim{k, m} = getGaussResults(Beta_prevStim, sigma);
         LogRegModel_monks.sm_Beta_prevCho{k, m} = getGaussResults(Beta_prevCho, sigma);
         LogRegModel_monks.sm_deltaBeta{k, m} = getGaussResults(deltaBeta, sigma);
+        
+        % Spearman's correlation
+        [LogRegModel_monks.corrSpm_r_currStim{k, m}, LogRegModel_monks.corrSpm_pValue_currStim{k, m}] = corr(LogRegModel_monks.sm_Beta_currStim{k, m},'Type','Spearman');
+        [LogRegModel_monks.corrSpm_r_prevStim{k, m}, LogRegModel_monks.corrSpm_pValue_prevStim{k, m}] = corr(LogRegModel_monks.sm_Beta_prevStim{k, m},'Type','Spearman');
+        [LogRegModel_monks.corrSpm_r_prevCho{k, m}, LogRegModel_monks.corrSpm_pValue_prevCho{k, m}] = corr(LogRegModel_monks.sm_Beta_prevCho{k, m},'Type','Spearman');
+        [LogRegModel_monks.corrSpm_r_deltaBeta{k, m}, LogRegModel_monks.corrSpm_pValue_deltaBeta{k, m}] = corr(LogRegModel_monks.sm_deltaBeta{k, m},'Type','Spearman');
     end
 end
 
