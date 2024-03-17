@@ -151,6 +151,8 @@ PsychoFits_monks.pfit_output = cell(length(monkey),1);
 PsychoFits_monks.pseudoR2 = cell(length(monkey),1);
 PsychoFits_monks.PSE = cell(length(monkey),1);
 PsychoFits_monks.deltaPSE = cell(length(monkey),1);
+PsychoFits_monks.avg_pseudoR2 = []; 
+PsychoFits_monks.sd_pseudoR2 = []; 
 for k = 1:length(monkey) % per monkey
     clear all_data
     switch k
@@ -227,6 +229,17 @@ for k = 1:length(monkey) % per monkey
     PsychoFits_monks.PSE{k} = PSE;
     PsychoFits_monks.deltaPSE{k} = deltaPSE;
 end
+
+temp_pseudoR2=[]; %%%%%%%%
+for m = 1:length(PsychoFits_monks.modality)
+    for k = 1:length(PsychoFits_monks.monkey)
+        for p = 1:length(PsychoFits_monks.prior)
+            temp_pseudoR2 = [temp_pseudoR2; PsychoFits_monks.pseudoR2{k}{m,p}];
+        end 
+    end
+end
+PsychoFits_monks.avg_pseudoR2 = mean(temp_pseudoR2)
+PsychoFits_monks.sd_pseudoR2 = std(temp_pseudoR2)
 
 save_results_path = strcat(currDir,'\Results\Adaptive paradigm\');
 save(strcat(save_results_path,'PsychoFits_adaptive'),'PsychoFits_monks');
