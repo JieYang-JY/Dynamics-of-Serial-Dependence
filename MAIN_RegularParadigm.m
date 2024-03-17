@@ -162,6 +162,8 @@ LogRegModel_monks.sm_Beta_currStim = cell(length(monkey), length(mod));
 LogRegModel_monks.sm_Beta_prevStim = cell(length(monkey), length(mod));
 LogRegModel_monks.sm_Beta_prevCho = cell(length(monkey), length(mod));
 LogRegModel_monks.sm_deltaBeta = cell(length(monkey), length(mod));
+PsychoFits_monks.avg_pseudoR2 = []; 
+PsychoFits_monks.sd_pseudoR2 = []; 
 
 window_size = 1000;
 step_size = 500;
@@ -180,13 +182,13 @@ for k = 1:length(monkey) % per monkey
     end
 
     for m = 1:length(mod) % per modality
-        disp(['Sliding in ' cell2mat(mod(m)) ' condition...'])
+        disp(['Sliding in ' cell2mat(mod(m)) ' ...'])
         pos_windowEnd = window_size; prev_pos_windowEnd = 0; winInd = 0; % RESET
         pfit_output_PL = cell(0); threshold_PL = []; PSE_PL = []; pseudoR2_PL = [];
         pfit_output_SD = cell(0); PSE_SD = []; pseudoR2_SD = []; deltaPSE = [];
         mdl_glmfit = cell(0); Beta_currStim = []; Beta_prevStim = []; Beta_prevCho = []; deltaBeta = [];
         while prev_pos_windowEnd < length(all_data.currStim{m}) % until the last trial of given stim type
-            winInd = winInd+1;
+            winInd = winInd+1
 
             % Psychometric fits
             clear temp_prior_type temp_choice temp_anaHD unique_heading;
@@ -277,6 +279,18 @@ for k = 1:length(monkey) % per monkey
         [LogRegModel_monks.corrSpm_r_deltaBeta{k, m}, LogRegModel_monks.corrSpm_pValue_deltaBeta{k, m}] = corr(LogRegModel_monks.sm_deltaBeta{k, m},'Type','Spearman');
     end
 end
+
+temp_pseudoR2=[]; %%%%%%%%
+for m = 1:length(PsychoFits_monks.modality)
+    for k = 1:length(PsychoFits_monks.monkey)
+        temp_pseudoR2 = [temp_pseudoR2; PsychoFits_monks.PerceptLearn.pseudoR2{k,m}];
+        for p = 1:length(PsychoFits_monks.prior)
+            temp_pseudoR2 = [temp_pseudoR2; PsychoFits_monks.SerialDepend.pseudoR2{k,m}(:,p)];
+        end 
+    end
+end
+PsychoFits_monks.avg_pseudoR2 = mean(temp_pseudoR2); 
+PsychoFits_monks.sd_pseudoR2 = std(temp_pseudoR2);
 
 save_results_path = strcat(currDir,'\Results\Regular paradigm\');
 save(strcat(save_results_path,'PsychoFits_LogRegModel_regular'), 'PsychoFits_monks', 'LogRegModel_monks');
