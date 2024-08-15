@@ -378,7 +378,8 @@ end
 Betas_SE_t_Ps = cell(length(mod), 1);
 glme = cell(length(mod), 1);
 for m = 1:length(mod)
-    mod{m}
+
+    disp(['modeling ',mod{m}, ' data...'])
 
     temp_currCho = currChoice_mod{m};
     temp_currStim = currStim_norm_mod{m};
@@ -388,7 +389,7 @@ for m = 1:length(mod)
     varNames = {'currCho','currStim','prevStim','prevCho','monkey'};
     input = table(temp_currCho,temp_currStim,temp_prevStim,temp_prevCho,temp_monkey, 'VariableNames',varNames);
     glme{m} = fitglme(input,'currCho ~ 1 + currStim + prevStim + prevCho + (1 + currStim|monkey + prevStim|monkey + prevCho|monkey)', ...
-        'Distribution','Binomial','Link','logit','FitMethod','Laplace');
+        'Distribution','Binomial','Link','logit','FitMethod','Laplace'); % running ~40 s.
     Betas_SE_t_Ps{m} = [glme{m}.Coefficients(:,2:4) glme{m}.Coefficients(:,6)];
 
 end
