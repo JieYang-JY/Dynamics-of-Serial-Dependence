@@ -387,7 +387,7 @@ for m = 1:length(mod)
     temp_monkey = monkey_mod{m};
     varNames = {'currCho','currStim','prevStim','prevCho','monkey'};
     input = table(temp_currCho,temp_currStim,temp_prevStim,temp_prevCho,temp_monkey, 'VariableNames',varNames);
-    glme{m} = fitglme(input,'currCho ~ 1 + currStim + prevStim + prevCho + (currStim|monkey) + (prevStim|monkey) + (prevCho|monkey)', ...
+    glme{m} = fitglme(input,'currCho ~ 1 + currStim + prevStim + prevCho + (1 + currStim|monkey + prevStim|monkey + prevCho|monkey)', ...
         'Distribution','Binomial','Link','logit','FitMethod','Laplace');
     Betas_SE_t_Ps{m} = [glme{m}.Coefficients(:,2:4) glme{m}.Coefficients(:,6)];
 
