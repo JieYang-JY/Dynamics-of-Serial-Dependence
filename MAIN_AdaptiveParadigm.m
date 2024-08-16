@@ -298,7 +298,7 @@ for k = 1:length(monkey) % per monkey
     for m = 1:length(mod) % per modality
         if (k==1 && m==1) || k~=1 % monkey B didn't perform this paradigm in vis mod
             mdl_glmfit = fitglm([currStim_norm_mod{m} prevStim_norm_mod{m} prevChoice_mod{m}],currChoice_mod{m},'Distribution','binomial','Link','logit');
-            Betas_SE_t_Ps = table2array(mdl_glmfit{m}.Coefficients);
+            Betas_SE_t_Ps = table2array(mdl_glmfit.Coefficients);
             LogRegModel_monks.model{k,m} = mdl_glmfit;
             LogRegModel_monks.Betas_SE_t_Ps{k,m} = Betas_SE_t_Ps;
         end
@@ -321,8 +321,8 @@ for m = 1:length(mod)
     temp_plist_prevCho = [];
     for k = 1:length(monkey)
         if (k==1 && m==1) || k~=1 % monkey B didn't perform this paradigm in vis mod
-            temp_plist_prevStim = [temp_plist_prevStim LogRegModel_monks.Betas_SE_t_Ps{k}{m}(3,4)];
-            temp_plist_prevCho = [temp_plist_prevCho LogRegModel_monks.Betas_SE_t_Ps{k}{m}(4,4)];
+            temp_plist_prevStim = [temp_plist_prevStim LogRegModel_monks.Betas_SE_t_Ps{k,m}(3,4)];
+            temp_plist_prevCho = [temp_plist_prevCho LogRegModel_monks.Betas_SE_t_Ps{k,m}(4,4)];
         end
     end
     [FishersMethod.p_FM_prevStim{m}, FishersMethod.chisquare_prevStim{m}] = getFishersP(temp_plist_prevStim);
@@ -388,7 +388,7 @@ for m = 1:length(mod)
     temp_monkey = monkey_mod{m};
     varNames = {'currCho','currStim','prevStim','prevCho','monkey'};
     input = table(temp_currCho,temp_currStim,temp_prevStim,temp_prevCho,temp_monkey, 'VariableNames',varNames);
-    glme{m} = fitglme(input,'currCho ~ 1 + currStim + prevStim + prevCho + (1 + currStim|monkey + prevStim|monkey + prevCho|monkey)', ...
+    glme{m} = fitglme(input,'currCho ~ 1 + currStim + prevStim + prevCho + (1 + currStim + prevStim + prevCho|monkey)', ...
         'Distribution','Binomial','Link','logit','FitMethod','Laplace'); % running ~40 s.
     Betas_SE_t_Ps{m} = [glme{m}.Coefficients(:,2:4) glme{m}.Coefficients(:,6)];
 
@@ -470,8 +470,8 @@ counter = 0;
 for m = 1 : length(mod) 
     for k = 1 : length(monkey)
         if (k==1 && m==1) || k~=1 % monkey B didn't perform this paradigm in vis mod
-            betaSC{m, 1}(k,1:2) = [LogRegModel_monks.Betas_SE_t_Ps{k}{m}(3, 1) LogRegModel_monks.Betas_SE_t_Ps{k}{m}(4, 1)];
-            betaSC_err{m, 1}(k,1:2) = [LogRegModel_monks.Betas_SE_t_Ps{k}{m}(3, 2) LogRegModel_monks.Betas_SE_t_Ps{k}{m}(4, 2)];
+            betaSC{m, 1}(k,1:2) = [LogRegModel_monks.Betas_SE_t_Ps{k,m}(3, 1) LogRegModel_monks.Betas_SE_t_Ps{k,m}(4, 1)];
+            betaSC_err{m, 1}(k,1:2) = [LogRegModel_monks.Betas_SE_t_Ps{k,m}(3, 2) LogRegModel_monks.Betas_SE_t_Ps{k,m}(4, 2)];
             plot(betaSC{m, 1}(k,1), betaSC{m, 1}(k,2), shape{k}, 'Color', color{m}, 'LineWidth', 2, 'MarkerSize', 10); hold on;
             counter = counter + 1;
             legend_txt{counter} = [mod{m}, ', monkey ', monkey{k}];
