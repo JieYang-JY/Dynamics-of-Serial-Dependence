@@ -145,14 +145,18 @@ monkey = {'B'; 'D'; 'G'; 'J'};
 PsychoFits_monks.monkey = monkey;
 PsychoFits_monks.modality = mod;
 PsychoFits_monks.prior = prior;
-PsychoFits_monks.PerceptLearn.pfit_output = cell(length(monkey), length(mod)); % Psychometric fits: perceptual learning
-PsychoFits_monks.PerceptLearn.pseudoR2 = cell(length(monkey), length(mod));
-PsychoFits_monks.PerceptLearn.PSE = cell(length(monkey), length(mod));
-PsychoFits_monks.PerceptLearn.thre = cell(length(monkey), length(mod));
-PsychoFits_monks.SerialDepend.pfit_output = cell(length(monkey), length(mod)); % Psychometric fits: aggregate serial dependence
-PsychoFits_monks.SerialDepend.pseudoR2 = cell(length(monkey), length(mod));
-PsychoFits_monks.SerialDepend.PSE = cell(length(monkey), length(mod));
-PsychoFits_monks.SerialDepend.deltaPSE = cell(length(monkey), length(mod));
+PsychoFits_monks.PsychoPerfo.pfit_output = cell(length(monkey), length(mod)); % Psychometric fits: performance
+PsychoFits_monks.PsychoPerfo.pseudoR2 = cell(length(monkey), length(mod));
+PsychoFits_monks.PsychoPerfo.PSE = cell(length(monkey), length(mod));
+PsychoFits_monks.PsychoPerfo.thre = cell(length(monkey), length(mod));
+PsychoFits_monks.SerialDepend.pfit_output_pHD = cell(length(monkey), length(mod)); % Psychometric fits: aggregate serial dependence, sorted by prev heading
+PsychoFits_monks.SerialDepend.pseudoR2_pHD = cell(length(monkey), length(mod));
+PsychoFits_monks.SerialDepend.PSE_pHD = cell(length(monkey), length(mod));
+PsychoFits_monks.SerialDepend.deltaPSE_pHD = cell(length(monkey), length(mod));
+PsychoFits_monks.SerialDepend.pfit_output_pCho = cell(length(monkey), length(mod)); % Psychometric fits: aggregate serial dependence, sorted by prev choice
+PsychoFits_monks.SerialDepend.pseudoR2_pCho = cell(length(monkey), length(mod));
+PsychoFits_monks.SerialDepend.PSE_pCho = cell(length(monkey), length(mod));
+PsychoFits_monks.SerialDepend.deltaPSE_pCho = cell(length(monkey), length(mod));
 LogRegModel_monks.model = cell(length(monkey), length(mod)); % Modeling
 LogRegModel_monks.Beta_currStim = cell(length(monkey), length(mod));
 LogRegModel_monks.Beta_prevStim = cell(length(monkey), length(mod));
@@ -184,52 +188,68 @@ for k = 1:length(monkey) % per monkey
     for m = 1:length(mod) % per modality
         disp(['Sliding in ' cell2mat(mod(m)) ' ...'])
         pos_windowEnd = window_size; prev_pos_windowEnd = 0; winInd = 0; % RESET
-        pfit_output_PL = cell(0); threshold_PL = []; PSE_PL = []; pseudoR2_PL = [];
-        pfit_output_SD = cell(0); PSE_SD = []; pseudoR2_SD = []; deltaPSE = [];
+        pfit_output_Pf = cell(0); threshold_Pf = []; PSE_Pf = []; pseudoR2_Pf = [];
+        pfit_output_SD_pHD = cell(0); PSE_SD_pHD = []; pseudoR2_SD_pHD = []; deltaPSE_pHD = [];
+        pfit_output_SD_pCho = cell(0); PSE_SD_pCho = []; pseudoR2_SD_pCho = []; deltaPSE_pCho = [];
         mdl_glmfit = cell(0); Beta_currStim = []; Beta_prevStim = []; Beta_prevCho = []; deltaBeta = [];
         while prev_pos_windowEnd < length(all_data.currStim{m}) % until the last trial of given stim type
             winInd = winInd+1
 
             % Psychometric fits
-            clear temp_prior_type temp_choice temp_anaHD unique_heading;
-            temp_prior_type = all_data.prior{m}(pos_windowEnd-window_size+1 : pos_windowEnd);
+            clear temp_priorHD_type temp_priorCho_type temp_choice temp_anaHD unique_heading;
+            temp_priorHD_type = all_data.prior{m}(pos_windowEnd-window_size+1 : pos_windowEnd);
+            temp_priorCho_type = all_data.prevChoice{m}(pos_windowEnd-window_size+1 : pos_windowEnd);
             temp_choice = all_data.currChoice{m}(pos_windowEnd-window_size+1 : pos_windowEnd);
             temp_anaHD = all_data.currStim{m}(pos_windowEnd-window_size+1 : pos_windowEnd);
             unique_heading = unique(temp_anaHD);
-            %perceptual learning ----------------
-            psycho_right_PL = []; fit_data_psycho_cum_PL = [];
+            %performance ----------------
+            psycho_right_Pf = []; fit_data_psycho_cum_Pf = [];
             for h = 1:length(unique_heading) % per unique heading
                 clear temp_heading; temp_heading = logical(temp_anaHD==unique_heading(h));
                 clear temp_right_choice_trials;temp_right_choice_trials = (temp_heading & temp_choice==RIGHT);
-                psycho_right_PL(h) = 1*sum(temp_right_choice_trials) / sum(temp_heading);
-                fit_data_psycho_cum_PL(h, 1) = unique_heading(h);
-                fit_data_psycho_cum_PL(h, 2) = psycho_right_PL(h);
-                fit_data_psycho_cum_PL(h, 3) = sum(temp_heading);
+                psycho_right_Pf(h) = 1*sum(temp_right_choice_trials) / sum(temp_heading);
+                fit_data_psycho_cum_Pf(h, 1) = unique_heading(h);
+                fit_data_psycho_cum_Pf(h, 2) = psycho_right_Pf(h);
+                fit_data_psycho_cum_Pf(h, 3) = sum(temp_heading);
             end
-            pfit_output_PL{winInd, 1} = getPsychoFit(fit_data_psycho_cum_PL(:,:), fit_data_psycho_cum_PL(:,1));
-            threshold_PL(winInd, 1) = pfit_output_PL{winInd, 1}.thresh;
-            PSE_PL(winInd, 1) = pfit_output_PL{winInd, 1}.bias;
-            pseudoR2_PL(winInd, 1) = pfit_output_PL{winInd, 1}.pseudoR2;
+            pfit_output_Pf{winInd, 1} = getPsychoFit(fit_data_psycho_cum_Pf(:,:), fit_data_psycho_cum_Pf(:,1));
+            threshold_Pf(winInd, 1) = pfit_output_Pf{winInd, 1}.thresh;
+            PSE_Pf(winInd, 1) = pfit_output_Pf{winInd, 1}.bias;
+            pseudoR2_Pf(winInd, 1) = pfit_output_Pf{winInd, 1}.pseudoR2;
             %aggregate serial dependence ----------------
-            psycho_right_SD = []; fit_data_psycho_cum_SD = cell(1,length(prior));
+            psycho_right_SD_pHD = []; fit_data_psycho_cum_SD_pHD = cell(1,length(prior));
+            psycho_right_SD_pCho = []; fit_data_psycho_cum_SD_pCho = cell(1,length(prior));
             for p = 1:length(prior) % per prior
                 for h = 1:length(unique_heading) % per unique heading
-                    clear temp_heading; temp_heading = logical(temp_prior_type==prior(p) & temp_anaHD==unique_heading(h));
-                    clear temp_right_choice_trials;temp_right_choice_trials = (temp_heading & temp_choice==RIGHT);
-                    psycho_right_SD(p,h) = 1*sum(temp_right_choice_trials) / sum(temp_heading);
-                    fit_data_psycho_cum_SD{p}(h, 1) = unique_heading(h);
-                    fit_data_psycho_cum_SD{p}(h, 2) = psycho_right_SD(p,h);
-                    fit_data_psycho_cum_SD{p}(h, 3) = sum(temp_heading);
+                    clear temp_heading_pHD; temp_heading_pHD = logical(temp_priorHD_type==prior(p) & temp_anaHD==unique_heading(h));
+                    clear temp_right_choice_trials_pHD; temp_right_choice_trials_pHD = (temp_heading_pHD & temp_choice==RIGHT);
+                    psycho_right_SD_pHD(p,h) = 1*sum(temp_right_choice_trials_pHD) / sum(temp_heading_pHD);
+                    fit_data_psycho_cum_SD_pHD{p}(h, 1) = unique_heading(h);
+                    fit_data_psycho_cum_SD_pHD{p}(h, 2) = psycho_right_SD_pHD(p,h);
+                    fit_data_psycho_cum_SD_pHD{p}(h, 3) = sum(temp_heading_pHD);
+                    % ------------------
+                    clear temp_heading_pCho; temp_heading_pCho = logical(temp_priorCho_type==prior(p) & temp_anaHD==unique_heading(h));
+                    clear temp_right_choice_trials_pCho; temp_right_choice_trials_pCho = (temp_heading_pCho & temp_choice==RIGHT);
+                    psycho_right_SD_pCho(p,h) = 1*sum(temp_right_choice_trials_pCho) / sum(temp_heading_pCho);
+                    fit_data_psycho_cum_SD_pCho{p}(h, 1) = unique_heading(h);
+                    fit_data_psycho_cum_SD_pCho{p}(h, 2) = psycho_right_SD_pCho(p,h);
+                    fit_data_psycho_cum_SD_pCho{p}(h, 3) = sum(temp_heading_pCho);
                 end
-                clear temp_index;temp_index = find(fit_data_psycho_cum_SD{p}(:,3)==0);
-                if temp_index % if the heading hasn't been tested in the given prior type,
-                    fit_data_psycho_cum_SD{p}(temp_index,:) = []; % then remove it from the input matrix for PsychoFit
-                end
-                pfit_output_SD{winInd, p} = getPsychoFit(fit_data_psycho_cum_SD{p}(:,:), fit_data_psycho_cum_SD{p}(:,1));
-                PSE_SD(winInd, p) = pfit_output_SD{winInd, p}.bias;
-                pseudoR2_SD(winInd, p) = pfit_output_SD{winInd, p}.pseudoR2;
+                clear temp_index;temp_index = find(fit_data_psycho_cum_SD_pHD{p}(:,3)==0);
+                if temp_index, fit_data_psycho_cum_SD_pHD{p}(temp_index,:) = []; end
+                pfit_output_SD_pHD{winInd, p} = getPsychoFit(fit_data_psycho_cum_SD_pHD{p}(:,:), fit_data_psycho_cum_SD_pHD{p}(:,1));
+                PSE_SD_pHD(winInd, p) = pfit_output_SD_pHD{winInd, p}.bias;
+                pseudoR2_SD_pHD(winInd, p) = pfit_output_SD_pHD{winInd, p}.pseudoR2;
+                % ------------------
+                clear temp_index;temp_index = find(fit_data_psycho_cum_SD_pCho{p}(:,3)==0);
+                if temp_index, fit_data_psycho_cum_SD_pCho{p}(temp_index,:) = []; end
+                pfit_output_SD_pCho{winInd, p} = getPsychoFit(fit_data_psycho_cum_SD_pCho{p}(:,:), fit_data_psycho_cum_SD_pCho{p}(:,1));
+                PSE_SD_pCho(winInd, p) = pfit_output_SD_pCho{winInd, p}.bias;
+                pseudoR2_SD_pCho(winInd, p) = pfit_output_SD_pCho{winInd, p}.pseudoR2;
             end
-            deltaPSE(winInd, 1) = PSE_SD(winInd, 1) - PSE_SD(winInd, 2);
+            deltaPSE_pHD(winInd, 1) = PSE_SD_pHD(winInd, 1) - PSE_SD_pHD(winInd, 2);
+            % ------------------
+            deltaPSE_pCho(winInd, 1) = PSE_SD_pCho(winInd, 1) - PSE_SD_pCho(winInd, 2);
 
             % Modeling
             clear temp_currStim temp_prevStim temp_currChoice temp_prevChoice;
@@ -250,16 +270,24 @@ for k = 1:length(monkey) % per monkey
                 pos_windowEnd = length(all_data.currStim{m});
             end
         end
-
-        PsychoFits_monks.PerceptLearn.pfit_output{k, m} = pfit_output_PL; % Psychometric fits: perceptual learning
-        PsychoFits_monks.PerceptLearn.pseudoR2{k, m} = pseudoR2_PL;
-        PsychoFits_monks.PerceptLearn.PSE{k, m} = PSE_PL;
-        PsychoFits_monks.PerceptLearn.thre{k, m} = threshold_PL;
-        PsychoFits_monks.SerialDepend.pfit_output{k, m} = pfit_output_SD; % Psychometric fits: aggregate serial dependence
-        PsychoFits_monks.SerialDepend.pseudoR2{k, m} = pseudoR2_SD;
-        PsychoFits_monks.SerialDepend.PSE{k, m} = PSE_SD;
-        PsychoFits_monks.SerialDepend.deltaPSE{k, m} = deltaPSE;
-        LogRegModel_monks.model{k, m} = mdl_glmfit; % Modeling
+        
+        % Psychometric fits: performance
+        PsychoFits_monks.PsychoPerfo.pfit_output{k, m} = pfit_output_Pf;
+        PsychoFits_monks.PsychoPerfo.pseudoR2{k, m} = pseudoR2_Pf;
+        PsychoFits_monks.PsychoPerfo.PSE{k, m} = PSE_Pf;
+        PsychoFits_monks.PsychoPerfo.thre{k, m} = threshold_Pf;
+        % Psychometric fits: aggregate serial dependence, sorted by previous heading
+        PsychoFits_monks.SerialDepend.pfit_output_pHD{k, m} = pfit_output_SD_pHD; 
+        PsychoFits_monks.SerialDepend.pseudoR2_pHD{k, m} = pseudoR2_SD_pHD;
+        PsychoFits_monks.SerialDepend.PSE_pHD{k, m} = PSE_SD_pHD;
+        PsychoFits_monks.SerialDepend.deltaPSE_pHD{k, m} = deltaPSE_pHD;
+        % Psychometric fits: aggregate serial dependence, sorted by previous choice
+        PsychoFits_monks.SerialDepend.pfit_output_pCho{k, m} = pfit_output_SD_pCho; 
+        PsychoFits_monks.SerialDepend.pseudoR2_pCho{k, m} = pseudoR2_SD_pCho;
+        PsychoFits_monks.SerialDepend.PSE_pCho{k, m} = PSE_SD_pCho;
+        PsychoFits_monks.SerialDepend.deltaPSE_pCho{k, m} = deltaPSE_pCho;
+        % Modeling
+        LogRegModel_monks.model{k, m} = mdl_glmfit; 
         LogRegModel_monks.Beta_currStim{k, m} = Beta_currStim;
         LogRegModel_monks.Beta_prevStim{k, m} = Beta_prevStim;
         LogRegModel_monks.Beta_prevCho{k, m} = Beta_prevCho;
@@ -272,25 +300,57 @@ for k = 1:length(monkey) % per monkey
         LogRegModel_monks.sm_Beta_prevCho{k, m} = getGaussResults(Beta_prevCho, sigma);
         LogRegModel_monks.sm_deltaBeta{k, m} = getGaussResults(deltaBeta, sigma);
         
-        % Spearman's correlation
-        [LogRegModel_monks.corrSpm_r_currStim{k, m}, LogRegModel_monks.corrSpm_pValue_currStim{k, m}] = corr(LogRegModel_monks.sm_Beta_currStim{k, m},'Type','Spearman');
-        [LogRegModel_monks.corrSpm_r_prevStim{k, m}, LogRegModel_monks.corrSpm_pValue_prevStim{k, m}] = corr(LogRegModel_monks.sm_Beta_prevStim{k, m},'Type','Spearman');
-        [LogRegModel_monks.corrSpm_r_prevCho{k, m}, LogRegModel_monks.corrSpm_pValue_prevCho{k, m}] = corr(LogRegModel_monks.sm_Beta_prevCho{k, m},'Type','Spearman');
-        [LogRegModel_monks.corrSpm_r_deltaBeta{k, m}, LogRegModel_monks.corrSpm_pValue_deltaBeta{k, m}] = corr(LogRegModel_monks.sm_deltaBeta{k, m},'Type','Spearman');
+        % Spearman's rank correlation
+        [LogRegModel_monks.corrSpm_r_currStim{k, m}, LogRegModel_monks.corrSpm_pValue_currStim{k, m}] = ...
+            corr(LogRegModel_monks.sm_Beta_currStim{k, m},[1:length(LogRegModel_monks.sm_Beta_currStim{k, m})]','Type','Spearman');
+        [LogRegModel_monks.corrSpm_r_prevStim{k, m}, LogRegModel_monks.corrSpm_pValue_prevStim{k, m}] = ...
+            corr(LogRegModel_monks.sm_Beta_prevStim{k, m},[1:length(LogRegModel_monks.sm_Beta_prevStim{k, m})]','Type','Spearman');
+        [LogRegModel_monks.corrSpm_r_prevCho{k, m}, LogRegModel_monks.corrSpm_pValue_prevCho{k, m}] = ...
+            corr(LogRegModel_monks.sm_Beta_prevCho{k, m},[1:length(LogRegModel_monks.sm_Beta_prevCho{k, m})]','Type','Spearman');
+        [LogRegModel_monks.corrSpm_r_deltaBeta{k, m}, LogRegModel_monks.corrSpm_pValue_deltaBeta{k, m}] = ...
+            corr(LogRegModel_monks.sm_deltaBeta{k, m},[1:length(LogRegModel_monks.sm_deltaBeta{k, m})]','Type','Spearman');
     end
 end
-
-temp_pseudoR2=[]; %%%%%%%%
+%%%%%%%%%%%%%%%%
+temp_pseudoR2 = [];
+temp_pse_start5 = []; temp_pse_end5 = [];
+temp_thre_start5 = []; temp_thre_end5 = [];
+temp_dpse_pHD_start3rd = []; temp_dpse_pHD_end3rd = [];
+temp_dpse_pCho_start3rd = []; temp_dpse_pCho_end3rd = [];
 for m = 1:length(PsychoFits_monks.modality)
     for k = 1:length(PsychoFits_monks.monkey)
-        temp_pseudoR2 = [temp_pseudoR2; PsychoFits_monks.PerceptLearn.pseudoR2{k,m}];
+        temp_pseudoR2 = [temp_pseudoR2; PsychoFits_monks.PsychoPerfo.pseudoR2{k,m}]; %%%
+        temp_pse_start5 = [temp_pse_start5; PsychoFits_monks.PsychoPerfo.PSE{k,m}(1:5)]; %%%
+        temp_pse_end5 = [temp_pse_end5; PsychoFits_monks.PsychoPerfo.PSE{k,m}(end-4:end)];
+        temp_thre_start5 = [temp_thre_start5; PsychoFits_monks.PsychoPerfo.thre{k,m}(1:5)]; %%%
+        temp_thre_end5 = [temp_thre_end5; PsychoFits_monks.PsychoPerfo.thre{k,m}(end-4:end)];
+        temp_len = floor(length(PsychoFits_monks.SerialDepend.deltaPSE_pHD{k, m})/3);
+        temp_dpse_pHD_start3rd = [temp_dpse_pHD_start3rd; PsychoFits_monks.SerialDepend.deltaPSE_pHD{k, m}(1:temp_len)]; %%%
+        temp_dpse_pHD_end3rd = [temp_dpse_pHD_end3rd; PsychoFits_monks.SerialDepend.deltaPSE_pHD{k, m}(end-temp_len+1:end)];
+        temp_dpse_pCho_start3rd = [temp_dpse_pCho_start3rd; PsychoFits_monks.SerialDepend.deltaPSE_pCho{k, m}(1:temp_len)]; %%%
+        temp_dpse_pCho_end3rd = [temp_dpse_pCho_end3rd; PsychoFits_monks.SerialDepend.deltaPSE_pCho{k, m}(end-temp_len+1:end)];
         for p = 1:length(PsychoFits_monks.prior)
-            temp_pseudoR2 = [temp_pseudoR2; PsychoFits_monks.SerialDepend.pseudoR2{k,m}(:,p)];
+            temp_pseudoR2 = [temp_pseudoR2; PsychoFits_monks.SerialDepend.pseudoR2_pHD{k,m}(:,p); ...
+                PsychoFits_monks.SerialDepend.pseudoR2_pCho{k,m}(:,p)];
         end 
     end
 end
 PsychoFits_monks.avg_pseudoR2 = mean(temp_pseudoR2); 
 PsychoFits_monks.sd_pseudoR2 = std(temp_pseudoR2);
+fprintf('pseudoR2 (all): mean = %.2f, sd = %.3f, min = %.2f\n\n', mean(temp_pseudoR2), std(temp_pseudoR2), min(temp_pseudoR2))
+%--------------------------------------------------------------------------
+fprintf('PSE (start): mean = %.2f, sd = %.2f\n', mean(temp_pse_start5), std(temp_pse_start5))
+fprintf('PSE (end): mean = %.3f, sd = %.2f\n\n', mean(temp_pse_end5), std(temp_pse_end5))
+%--------------------------------------------------------------------------
+fprintf('Threshold (start): mean = %.2f, sd = %.2f\n', mean(temp_thre_start5), std(temp_thre_start5))
+fprintf('Threshold (end): mean = %.2f, sd = %.2f\n\n', mean(temp_thre_end5), std(temp_thre_end5))
+%--------------------------------------------------------------------------
+fprintf('\x0394PSE (sorted by prev heading, start): mean = %.2f, sd = %.2f\n', mean(temp_dpse_pHD_start3rd), std(temp_dpse_pHD_start3rd))
+fprintf('\x0394PSE (sorted by prev heading, end): mean = %.2f, sd = %.2f\n\n', mean(temp_dpse_pHD_end3rd), std(temp_dpse_pHD_end3rd))
+%--------------------------------------------------------------------------
+fprintf('\x0394PSE (sorted by prev choice, start): mean = %.2f, sd = %.2f\n', mean(temp_dpse_pCho_start3rd), std(temp_dpse_pCho_start3rd))
+fprintf('\x0394PSE (sorted by prev choice, end): mean = %.2f, sd = %.2f\n\n', mean(temp_dpse_pCho_end3rd), std(temp_dpse_pCho_end3rd))
+
 
 save_results_path = strcat(currDir,'\Results\Regular paradigm\');
 save(strcat(save_results_path,'PsychoFits_LogRegModel_regular'), 'PsychoFits_monks', 'LogRegModel_monks');
@@ -313,97 +373,162 @@ length_filename = length('PsychoFits_LogRegModel_regular.mat');
 save_fig_path = path_PsychoFits_LogRegModel(1:(end-length_filename));
 color{1} = [0 0 1]; % blue
 color{2} = [1 0 0]; % red
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
 disp('ploting: Figure 2B, 2C & Supplementary figure 4')
+FigureIndex1 = 1; figure(FigureIndex1);
+set(FigureIndex1,'Position', [10,80 1400,600], 'Name', 'Figure 2B');
+sub1 = cell(length(monkey), length(mod));
+FigureIndex2 = 2; figure(FigureIndex2);
+set(FigureIndex2,'Position', [10,80 1400,600], 'Name', 'Figure 2C');
+sub2 = cell(length(monkey), length(mod));
+FigureIndex3 = 3; figure(FigureIndex3);
+set(FigureIndex3,'Position', [10,80 1400,600], 'Name', 'Supplementary figure 4');
+sub3 = cell(length(monkey), length(mod));
 for k = 1 : length(monkey)
     for m = 1 : length(mod)
-        % beta_currStim
-        figure(1)
+        % beta_currStim ---------------------------
+        figure(FigureIndex1)
+        sub1{k,m} = subplot(length(mod), length(monkey), k+4*(m-1));
         plot(LogRegModel_monks.sm_Beta_currStim{k, m}, 's', 'MarkerFaceColor', color{m}, 'MarkerEdgeColor', color{m})
-        hold on; ylim([0, 14.5]);
-        ylabel('\beta [a.u.] (curr)'); xlabel('Training process (Window #)');
-        title(['Dynamics of model fits over training: currStim, monkey ', monkey{k}, ' in ', mod{m}]);
+        hold on; ylim([0, 14.5]); 
+        temp_winlen = length(LogRegModel_monks.sm_Beta_currStim{k, m});
+        xlim([0-round(temp_winlen*0.01), temp_winlen+floor(temp_winlen*0.05)]);
+        if m==1, title(['Monkey ',monkey{k}]); end
         set(gca,'YTick',[0 7 14]); set(gca,'YTickLabel',{'0', '7', '14'});
-        saveas(gcf,[save_fig_path,'ModelFit_currStim_monkey',monkey{k},'_',mod{m},'.png'],'png');
-        close
-        % beta_prev
-        figure(1)
-        plot(LogRegModel_monks.sm_Beta_prevStim{k, m}, 's', 'MarkerFaceColor', color{m}, 'MarkerEdgeColor', color{m})
-        hold on; legend_txt{1} = 'prevStim'; hold on;
-        plot(LogRegModel_monks.sm_Beta_prevCho{k, m}, 's', 'MarkerFaceColor', [0.6 0.6 0.6], 'MarkerEdgeColor', [0.6 0.6 0.6])
-        hold on; legend_txt{2} = 'prevCho'; hold on;
-        ylim([-1.3, 0.5]); ylabel('\beta [a.u.] (prev)'); xlabel('Training process (Window #)');
-        title(['Dynamics of model fits over training: prevStim & prevCho, monkey ', monkey{k}, ' in ', mod{m}]);
-        set(gca,'YTick',[-1.2 -0.6 0]); set(gca,'YTickLabel',{'-1.2', '-0.6', '0'});
-        leg = legend(legend_txt, 'Location', 'southwest'); legend('boxoff');
+        clear legend_txt, legend_txt = '\beta_{currStim}';
+        if k==1
+            clear leg, leg = legend(legend_txt, 'Location', 'northwest'); legend('boxoff');
+            temp_pos = leg.Position;
+            leg.Position = [temp_pos(1)-0.05*sub1{k,m}.Position(3) temp_pos(2)-0.1*sub1{k,m}.Position(4) temp_pos(3:4)];
+            temp_xlim = []; temp_xlim = xlim;
+            if m==1
+                txt = 'ves'; temp_text_x1 = temp_pos(1)*0.7; text_y1 = temp_pos(2)*1.02*max(ylim);
+            else
+                txt = 'vis';
+            end
+            text(temp_text_x1*temp_xlim(2), text_y1, txt, 'Color', color{m}, 'FontWeight', 'bold', 'FontSize', 11);
+        end
+        % beta_prev ---------------------------
+        figure(FigureIndex2)
+        sub2{k,m} = subplot(length(mod), length(monkey), k+4*(m-1));
+        if m==1, title(['Monkey ',monkey{k}]); end
+        plot(LogRegModel_monks.sm_Beta_prevStim{k, m}, 's', 'MarkerFaceColor', color{m}, 'MarkerEdgeColor', color{m}); hold on; 
+        plot(LogRegModel_monks.sm_Beta_prevCho{k, m}, 's', 'MarkerFaceColor', [0.6 0.6 0.6], 'MarkerEdgeColor', [0.6 0.6 0.6]); hold on;
+        legend_txt = cell(1, 2); legend_txt{1} = '\beta_{prevStim}'; legend_txt{2} = '\beta_{prevCho}'; 
+        ylim([-1.3, 0.5]); set(gca,'YTick',[-1.2 -0.6 0]); set(gca,'YTickLabel',{'-1.2', '-0.6', '0'});
+        xlim([0-round(temp_winlen*0.01), temp_winlen+floor(temp_winlen*0.05)]);
+        if m==1, title(['Monkey ',monkey{k}]); end
+        if k==1
+            clear leg, leg = legend(legend_txt, 'Location', 'southwest'); legend('boxoff');
+            temp_pos = leg.Position;
+            leg.Position = [temp_pos(1)-0.05*sub2{k,m}.Position(3) temp_pos(2:4)];
+            if m==1
+                txt = 'ves'; text_y2 = (1-temp_pos(2))*0.85*diff(ylim)+min(ylim); 
+            else
+                txt = 'vis'; 
+            end
+            text(temp_text_x1*temp_xlim(2), text_y2, txt, 'Color', color{m}, 'FontWeight', 'bold', 'FontSize', 11);
+        end
         plot([min(xlim), max(xlim)], [0 0], '--k'); hold on;
-        saveas(gcf,[save_fig_path,'ModelFit_prevStim_monkey',monkey{k},'_',mod{m},'.png'],'png');
-        close
-        
-        % deltabeta
-        figure(1)
-        plot(LogRegModel_monks.sm_deltaBeta{k, m}, 's', 'MarkerFaceColor', color{m}, 'MarkerEdgeColor', color{m})
-        hold on; ylim([-1.45, 0.7]);
-        ylabel('\Delta\beta (\beta_{prevStim} - \beta_{prevCho}) [a.u.]'); xlabel('Training process (Window #)');
-        title(['Dynamics of model fits over training: \Delta\beta, monkey ', monkey{k}, ' in ', mod{m}]);
-        set(gca,'YTick',[-1.4 -0.7 0 0.7]); set(gca,'YTickLabel',{'-1.4', '-0.7', '0', '0.7'});
+        % deltabeta ---------------------------
+        figure(FigureIndex3)
+        sub3{k,m} = subplot(length(mod), length(monkey), k+4*(m-1));
+        if m==1, title(['Monkey ',monkey{k}]); end
+        plot(LogRegModel_monks.sm_deltaBeta{k, m}, 's', 'MarkerFaceColor', color{m}, 'MarkerEdgeColor', color{m}); hold on; 
+        ylim([-1.45, 0.7]); set(gca,'YTick',[-1.4 -0.7 0 0.7]); set(gca,'YTickLabel',{'-1.4', '-0.7', '0', '0.7'});
+        xlim([0-round(temp_winlen*0.01), temp_winlen+floor(temp_winlen*0.05)]);
+        if m==1, title(['Monkey ',monkey{k}]); end
+        if k==1
+            if m==1
+                txt = 'ves'; text_y3 = 0.15*diff(ylim)+min(ylim); 
+            else
+                txt = 'vis'; 
+            end
+            text(temp_text_x1*temp_xlim(2), text_y3, txt, 'Color', color{m}, 'FontWeight', 'bold', 'FontSize', 11);
+        end
         plot([min(xlim), max(xlim)], [0 0], '--k'); hold on;
-        saveas(gcf,[save_fig_path,'ModelFit_prevCho_monkey',monkey{k},'_',mod{m},'.png'],'png');
-        close
     end
 end
+figure(FigureIndex1)
+axes('position',[0.09 0.475, 0.1 0.1]), axis off;
+text(0, 0, '\beta [a.u.]', 'FontSize', 12, 'FontWeight', 'bold', 'Rotation', 90);
+axes('position',[0.45 0.05, 0.1 0.1]), axis off;
+text(0, 0, 'Training process (Window #)', 'FontSize', 12, 'FontWeight', 'bold');
+saveas(gcf,[save_fig_path,'Figure 2B.png'],'png');
+close
+figure(FigureIndex2)
+axes('position',[0.09 0.475, 0.1 0.1]), axis off;
+text(0, 0, '\beta [a.u.]', 'FontSize', 12, 'FontWeight', 'bold', 'Rotation', 90);
+axes('position',[0.45 0.05, 0.1 0.1]), axis off;
+text(0, 0, 'Training process (Window #)', 'FontSize', 12, 'FontWeight', 'bold');
+saveas(gcf,[save_fig_path,'Figure 2C.png'],'png');
+close
+figure(FigureIndex3)
+axes('position',[0.09 0.345, 0.1 0.1]), axis off;
+text(0, 0, '\Delta\beta (\beta_{prevStim} - \beta_{prevCho}) [a.u.]', 'FontSize', 12, 'FontWeight', 'bold', 'Rotation', 90);
+axes('position',[0.45 0.05, 0.1 0.1]), axis off;
+text(0, 0, 'Training process (Window #)', 'FontSize', 12, 'FontWeight', 'bold');
+saveas(gcf,[save_fig_path,'Supplementary figure 4.png'],'png');
+close
 
-disp('ploting: Figure 1D') % Perceptual-learning example of psycho fits
-figure(1)
-x = []; y = [];  % ves
-x = PsychoFits_monks.PerceptLearn.pfit_output{3, 1}{92}.input(1:end, 1);
-y = PsychoFits_monks.PerceptLearn.pfit_output{3, 1}{92}.input(1:end, 2) ./ PsychoFits_monks.PerceptLearn.pfit_output{3, 1}{92}.input(1:end, 3);
-plot(x, y, 'o', 'Color', color{1}, 'LineWidth', 2, 'MarkerSize', 8); hold on;
-xi = []; pfitcurve_ves = [];
-xi = PsychoFits_monks.PerceptLearn.pfit_output{3, 1}{92}.xi;
-pfitcurve_ves = PsychoFits_monks.PerceptLearn.pfit_output{3, 1}{92}.pfitcurve;
-plot(xi, pfitcurve_ves, '-', 'Color', color{1}, 'LineWidth', 2, 'MarkerSize', 8); hold on;
-legend_txt{1} = 'ves';
-legend_txt{2} = [''];
-x = []; y = [];  % vis
-x = PsychoFits_monks.PerceptLearn.pfit_output{3, 2}{60}.input(1:end, 1);
-y = PsychoFits_monks.PerceptLearn.pfit_output{3, 2}{60}.input(1:end, 2) ./ PsychoFits_monks.PerceptLearn.pfit_output{3, 2}{60}.input(1:end, 3);
-plot(x, y, 'o', 'Color', color{2}, 'LineWidth', 2, 'MarkerSize', 8); hold on;
-xi = []; pfitcurve_vis = [];
-xi = PsychoFits_monks.PerceptLearn.pfit_output{3, 2}{60}.xi;
-pfitcurve_vis = PsychoFits_monks.PerceptLearn.pfit_output{3, 2}{60}.pfitcurve;
-plot(xi, pfitcurve_vis, '-', 'Color', color{2}, 'LineWidth', 2, 'MarkerSize', 8); hold on;
-legend_txt{3} = 'vis';
-legend_txt{4} = ['']; 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+disp('ploting: Figure 1D') % Example psychometric performance
+FigureIndex1 = 1; figure(FigureIndex1);
+set(FigureIndex1, 'Name', 'Figure 1D');
+monkIdx = 3; % Monkey G
+winInd = [92, 60]; % the exmple window for each mod
+legend_txt = cell(length(mod)*2, 1);
+index = []; % illustrating PSE
+for m = 1 : length(mod)
+    x = []; y = [];
+    x = PsychoFits_monks.PsychoPerfo.pfit_output{monkIdx, m}{winInd(m)}.input(1:end, 1);
+    y = PsychoFits_monks.PsychoPerfo.pfit_output{monkIdx, m}{winInd(m)}.input(1:end, 2) ./ ...
+        PsychoFits_monks.PsychoPerfo.pfit_output{monkIdx, m}{winInd(m)}.input(1:end, 3);
+    plot(x, y, 'o', 'Color', color{m}, 'LineWidth', 2, 'MarkerSize', 8); hold on;
+    xi = []; pfitcurve = [];
+    xi = PsychoFits_monks.PsychoPerfo.pfit_output{monkIdx, m}{winInd(m)}.xi;
+    pfitcurve = PsychoFits_monks.PsychoPerfo.pfit_output{monkIdx, m}{winInd(m)}.pfitcurve;
+    plot(xi, pfitcurve, '-', 'Color', color{m}, 'LineWidth', 2, 'MarkerSize', 8); hold on;
+    if m==1, legend_txt{m*2-1} = 'ves'; else, legend_txt{m*2-1} = 'vis'; end
+    legend_txt{m*2} = [''];
+    % -------------------------------
+    diff = []; diff = abs(pfitcurve - 0.5); 
+    index(m) = find(min(diff)==diff);
+    if isempty(index(m)); index(m) = find(-min(diff)==diff); end
+end
 legend(legend_txt, 'Location', 'northwest'); 
-diff = []; index = []; % illustrating PSE
-diff = abs(pfitcurve_ves - 0.5); index = find(min(diff)==diff); 
-if isempty(index); index = find(-min(diff)==diff); end
-plot([xi(index), xi(index)], [0 0.5], '--', 'Color', color{1}); hold on;
-diff = []; index = [];
-diff = abs(pfitcurve_vis - 0.5); index = find(min(diff)==diff); 
-if isempty(index); index = find(-min(diff)==diff); end
-plot([xi(index), xi(index)], [0 0.5], '--', 'Color', color{2}); hold on;
+for m = 1 : length(mod)
+    plot([xi(index(m)), xi(index(m))], [0 0.5], '--', 'Color', color{m}, 'LineWidth', 1); hold on;
+end
 xlim([min(x),max(x)]); ylim([0, 1]); % configuration
-plot([min(xlim), max(xlim)], [0.5 0.5], ':k'); hold on;
+plot([min(xlim), max(xlim)], [0.5 0.5], '--k'); hold on;
 text(2, 0.05, 'PSE', 'Rotation', 90, 'FontSize', 14, 'FontWeight', 'bold');
 ylabel('Prop. Rightward Choices'); xlabel('Heading [deg]');
-title('Example psychometric plot: monkey G (Perceptual Learning)');
 set(gca,'XTick',min(xi):0.5*max(xi):max(xi));
 set(gca,'XTickLabel',{num2str(min(xi)),num2str(0.5*min(xi)),'0',num2str(0.5*max(xi)),num2str(max(xi))});
 set(gca,'YTick',0:0.5:1);
-saveas(gcf,[save_fig_path,'ExamplePsychoPlot_monkeyG_PL.png'],'png');
+saveas(gcf,[save_fig_path,'Figure 1D.png'],'png');
 close
 
-disp('Supplementary figure 3A') % Serial-dependence example of psycho fits
-f = figure(1); f.Position(3) = [1100];
-winInd = [92, 60];
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+disp('ploting: Supplementary figure 3A') % Serial-dependence example of psycho fits
+FigureIndex1 = 1; f = figure(FigureIndex1); f.Position(3) = [1100];
+set(FigureIndex1, 'Name', 'Supplementary figure 3A');
+monkIdx = 3; % Monkey G
+winInd = [92, 60]; % the exmple window for each mod
 prior_type = {'left prior'; 'right prior'};
 for m = 1 : length(mod)
-    axes('Position', [0.07+0.5*(m-1) 0.11 0.4 0.8])
+    ax{m} = axes('Position', [0.07+0.5*(m-1) 0.11 0.4 0.8]);
+    legend_txt = cell(length(prior), 1); 
     for p = 1 : length(prior)
         x = []; y = []; % points
-        x = PsychoFits_monks.SerialDepend.pfit_output{3, m}{winInd(m), p}.input(1:end, 1);
-        y = PsychoFits_monks.SerialDepend.pfit_output{3, m}{winInd(m), p}.input(1:end, 2) ./ PsychoFits_monks.SerialDepend.pfit_output{3, m}{winInd(m), p}.input(1:end, 3);
+        x = PsychoFits_monks.SerialDepend.pfit_output_pHD{monkIdx, m}{winInd(m), p}.input(1:end, 1);
+        y = PsychoFits_monks.SerialDepend.pfit_output_pHD{monkIdx, m}{winInd(m), p}.input(1:end, 2) ./ ...
+            PsychoFits_monks.SerialDepend.pfit_output_pHD{monkIdx, m}{winInd(m), p}.input(1:end, 3);
         if p==1
             temp_color = color{m};
         else
@@ -411,61 +536,165 @@ for m = 1 : length(mod)
         end
         plot(x, y, 'o', 'Color', temp_color, 'LineWidth', 2, 'MarkerSize', 8); hold on;
         xi = []; pfitcurve = []; % curve
-        xi = PsychoFits_monks.SerialDepend.pfit_output{3, m}{winInd(m), p}.xi;
-        pfitcurve = PsychoFits_monks.SerialDepend.pfit_output{3, m}{winInd(m), p}.pfitcurve;
+        xi = PsychoFits_monks.SerialDepend.pfit_output_pHD{monkIdx, m}{winInd(m), p}.xi;
+        pfitcurve = PsychoFits_monks.SerialDepend.pfit_output_pHD{monkIdx, m}{winInd(m), p}.pfitcurve;
         plot(xi, pfitcurve, '-', 'Color', temp_color, 'LineWidth', 2, 'MarkerSize', 8); hold on;
-        legend_txt{p*2-1} = prior_type{p};
-        legend_txt{p*2} = [''];
-        legend(legend_txt, 'Location', 'southeast'); 
-        xlim([min(xi),max(xi)]); ylim([0,1]);
-        ylabel('Prop. Rightward Choices'); xlabel('Heading [deg]');
-        title([mod{m} ' example']);
-        set(gca,'XTick',min(xi):0.5*max(xi):max(xi));
-        set(gca,'XTickLabel',{num2str(min(xi)),num2str(0.5*min(xi)),'0',num2str(0.5*max(xi)),num2str(max(xi))});
-        set(gca,'YTick',0:0.5:1);
+        legend_txt{p*2-1} = prior_type{p}; legend_txt{p*2} = [''];
     end
+    legend(legend_txt, 'Location', 'southeast'); legend('boxoff');
+    xlim([min(xi),max(xi)]); ylim([0,1]);
+    ylabel('Prop. Rightward Choices'); xlabel('Heading [deg]');
+    set(gca,'XTick',min(xi):0.5*max(xi):max(xi));
+    set(gca,'XTickLabel',{num2str(min(xi)),num2str(0.5*min(xi)),'0',num2str(0.5*max(xi)),num2str(max(xi))});
+    set(gca,'YTick',0:0.5:1);
+    plot([0 0], [0 1], '--k'); hold on; plot([min(xi) max(xi)], [0.5 0.5], '--k'); hold on;
+    if m==1, txt = 'ves'; else, txt = 'vis'; end
+    text(8.75, 0.29, txt, 'FontWeight', 'bold', 'Color', color{m}, 'FontSize', 11);
 end
-saveas(gcf,[save_fig_path,'ExamplePsychoPlot_monkeyG_SD.png'],'png');
+saveas(gcf,[save_fig_path,'Supplementary figure 3A.png'],'png');
 close
 
-disp('ploting: Supplementary figure 2 & Supplementary figure 3B')
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+disp('ploting: Supplementary figure 4A') % Serial-dependence example of psycho fits
+FigureIndex1 = 1; f = figure(FigureIndex1); f.Position(3) = [1100];
+set(FigureIndex1, 'Name', 'Supplementary figure 3A');
+monkIdx = 3; % Monkey G
+winInd = [92, 60]; % the exmple window for each mod
+prior_type = {'left prior'; 'right prior'};
+for m = 1 : length(mod)
+    ax{m} = axes('Position', [0.07+0.5*(m-1) 0.11 0.4 0.8]);
+    legend_txt = cell(length(prior), 1); 
+    for p = 1 : length(prior)
+        x = []; y = []; % points
+        x = PsychoFits_monks.SerialDepend.pfit_output_pCho{monkIdx, m}{winInd(m), p}.input(1:end, 1);
+        y = PsychoFits_monks.SerialDepend.pfit_output_pCho{monkIdx, m}{winInd(m), p}.input(1:end, 2) ./ ...
+            PsychoFits_monks.SerialDepend.pfit_output_pCho{monkIdx, m}{winInd(m), p}.input(1:end, 3);
+        if p==1
+            temp_color = color{m};
+        else
+            temp_color = color{m} + 0.5; temp_color(temp_color>1) = 1;
+        end
+        plot(x, y, 'o', 'Color', temp_color, 'LineWidth', 2, 'MarkerSize', 8); hold on;
+        xi = []; pfitcurve = []; % curve
+        xi = PsychoFits_monks.SerialDepend.pfit_output_pCho{monkIdx, m}{winInd(m), p}.xi;
+        pfitcurve = PsychoFits_monks.SerialDepend.pfit_output_pCho{monkIdx, m}{winInd(m), p}.pfitcurve;
+        plot(xi, pfitcurve, '-', 'Color', temp_color, 'LineWidth', 2, 'MarkerSize', 8); hold on;
+        legend_txt{p*2-1} = prior_type{p}; legend_txt{p*2} = [''];
+    end
+    legend(legend_txt, 'Location', 'southeast'); legend('boxoff');
+    xlim([min(xi),max(xi)]); ylim([0,1]);
+    ylabel('Prop. Rightward Choices'); xlabel('Heading [deg]');
+    set(gca,'XTick',min(xi):0.5*max(xi):max(xi));
+    set(gca,'XTickLabel',{num2str(min(xi)),num2str(0.5*min(xi)),'0',num2str(0.5*max(xi)),num2str(max(xi))});
+    set(gca,'YTick',0:0.5:1);
+    plot([0 0], [0 1], '--k'); hold on; plot([min(xi) max(xi)], [0.5 0.5], '--k'); hold on;
+    if m==1, txt = 'ves'; else, txt = 'vis'; end
+    text(8.75, 0.29, txt, 'FontWeight', 'bold', 'Color', color{m}, 'FontSize', 11);
+end
+saveas(gcf,[save_fig_path,'Supplementary figure 4A.png'],'png');
+close
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+disp('ploting: Supplementary figure 2A, 2B, 3B, 4B') % the dynamics of a series of psychometric parameters
+FigureIndex1 = 1; figure(FigureIndex1);
+set(FigureIndex1,'Position', [10,80 1400,600], 'Name', 'Supplementary figure 2A');
+FigureIndex2 = 2; figure(FigureIndex2);
+set(FigureIndex2,'Position', [10,80 1400,600], 'Name', 'Supplementary figure 2B');
+FigureIndex3 = 3; figure(FigureIndex3);
+set(FigureIndex3,'Position', [10,80 1400,600], 'Name', 'Supplementary figure 3B');
+FigureIndex4 = 4; figure(FigureIndex4);
+set(FigureIndex4,'Position', [10,80 1400,600], 'Name', 'Supplementary figure 4B');
 for k = 1 : length(monkey)
     for m = 1 : length(mod)
-        % PSE
-        figure(1)
-        plot(PsychoFits_monks.PerceptLearn.PSE{k, m}, 'o', 'Color', color{m})
+        % PSE ---------------------------
+        figure(FigureIndex1)
+        subplot(length(mod), length(monkey), k+4*(m-1));
+        plot(PsychoFits_monks.PsychoPerfo.PSE{k, m}, 'o', 'Color', color{m})
         hold on; ylim([-50, 50]);
+        temp_winlen = length(PsychoFits_monks.PsychoPerfo.PSE{k, m});
+        xlim([0-round(temp_winlen*0.01), temp_winlen+floor(temp_winlen*0.05)]);
+        if m==1, title(['Monkey ',monkey{k}]); end
         plot([min(xlim), max(xlim)], [0 0], '--k'); hold on;
-        ylabel('PSE [deg]'); xlabel('Training process (Window #)');
-        title(['Dynamics of PSE over training: monkey ', monkey{k}, ' in ', mod{m}]);
         set(gca,'YTick',[-40 0 40]); set(gca,'YTickLabel',{'-40', '0', '40'});
-        saveas(gcf,[save_fig_path,'PsychoPlot_PSE_monkey',monkey{k},'_',mod{m},'.png'],'png');
-        close
-        % Threshold
-        figure(1)
-        log2_thre = log2(PsychoFits_monks.PerceptLearn.thre{k, m});
+        if k==1
+            if m==1, txt = 'ves'; else, txt = 'vis'; end
+            text(max(xlim)*0.75, 35, txt, 'FontWeight', 'bold', 'Color', color{m}, 'FontSize', 11);
+        end
+        % Threshold ---------------------------
+        figure(FigureIndex2)
+        subplot(length(mod), length(monkey), k+4*(m-1));
+        log2_thre = log2(PsychoFits_monks.PsychoPerfo.thre{k, m});
         plot(log2_thre, 'o', 'Color', color{m})
         hold on; ylim([0, 7]);
+        xlim([0-round(temp_winlen*0.01), temp_winlen+floor(temp_winlen*0.05)]);
+        if m==1, title(['Monkey ',monkey{k}]); end
         plot([min(xlim), max(xlim)], [log2(6) log2(6)], '--k'); hold on;
-        ylabel('Threshold [deg]'); xlabel('Training process (Window #)');
-        title(['Dynamics of Threshold over training: monkey ', monkey{k}, ' in ', mod{m}]);
         set(gca,'YTick',[1 3 5 7]); set(gca,'YTickLabel',{'2', '8', '32', '128'});
-        saveas(gcf,[save_fig_path,'PsychoPlot_Thre_monkey',monkey{k},'_',mod{m},'.png'],'png');
-        close
-        
-        % deltaPSE
-        figure(1)
-        plot(PsychoFits_monks.SerialDepend.deltaPSE{k, m}, 'o', 'Color', color{m}); hold on;
+        if k==1
+            if m==1, txt = 'ves'; else, txt = 'vis'; end
+            text(max(xlim)*0.75, 6, txt, 'FontWeight', 'bold', 'Color', color{m}, 'FontSize', 11);
+        end
+        % deltaPSE, sorted by prev heading ---------------------------
+        figure(FigureIndex3)
+        subplot(length(mod), length(monkey), k+4*(m-1));
+        plot(PsychoFits_monks.SerialDepend.deltaPSE_pHD{k, m}, 'o', 'Color', color{m}); hold on;
         if m==1
+            title(['Monkey ',monkey{k}]);
             ylim([-75, 90]); set(gca,'YTick',[-50 0 50]); set(gca,'YTickLabel',{'-50', '0', '50'});
         else
             ylim([-80, 20]); set(gca,'YTick',[-60 -30 0]); set(gca,'YTickLabel',{'-60', '-30', '0'});
         end
+        xlim([0-round(temp_winlen*0.01), temp_winlen+floor(temp_winlen*0.05)]);
         plot([min(xlim), max(xlim)], [0 0], '--k'); hold on;
-        ylabel('\DeltaPSE [deg]'); xlabel('Training process (Window #)');
-        title(['Dynamics of \DeltaPSE over training: monkey ', monkey{k}, ' in ', mod{m}]);
-        saveas(gcf,[save_fig_path,'PsychoPlot_dPSE_monkey',monkey{k},'_',mod{m},'.png'],'png');
-        close
+        if k==1
+            if m==1, txt = 'ves'; temp_y = -55; else, txt = 'vis'; temp_y = -65; end
+            text(max(xlim)*0.75, temp_y, txt, 'FontWeight', 'bold', 'Color', color{m}, 'FontSize', 11);
+        end
+        % deltaPSE, sorted by prev choice ---------------------------
+        figure(FigureIndex4)
+        subplot(length(mod), length(monkey), k+4*(m-1));
+        plot(PsychoFits_monks.SerialDepend.deltaPSE_pCho{k, m}, 'o', 'Color', color{m}); hold on;
+        if m==1
+            title(['Monkey ',monkey{k}]);
+            ylim([-75, 90]); set(gca,'YTick',[-50 0 50]); set(gca,'YTickLabel',{'-50', '0', '50'});
+        else
+            ylim([-80, 20]); set(gca,'YTick',[-60 -30 0]); set(gca,'YTickLabel',{'-60', '-30', '0'});
+        end
+        xlim([0-round(temp_winlen*0.01), temp_winlen+floor(temp_winlen*0.05)]);
+        plot([min(xlim), max(xlim)], [0 0], '--k'); hold on;
+        if k==1
+            if m==1, txt = 'ves'; temp_y = -55; else, txt = 'vis'; temp_y = -65; end
+            text(max(xlim)*0.75, temp_y, txt, 'FontWeight', 'bold', 'Color', color{m}, 'FontSize', 11);
+        end
     end
 end
-
+figure(FigureIndex1)
+axes('position',[0.09 0.465, 0.1 0.1]), axis off;
+text(0, 0, 'PSE [deg]', 'FontSize', 12, 'FontWeight', 'bold', 'Rotation', 90);
+axes('position',[0.44 0.05, 0.1 0.1]), axis off;
+text(0, 0, 'Training process (Window #)', 'FontSize', 12, 'FontWeight', 'bold');
+saveas(gcf,[save_fig_path,'Supplementary figure 2A.png'],'png');
+close
+figure(FigureIndex2)
+axes('position',[0.09 0.4, 0.1 0.1]), axis off;
+text(0, 0, 'Threshold [deg]', 'FontSize', 12, 'FontWeight', 'bold', 'Rotation', 90);
+axes('position',[0.44 0.05, 0.1 0.1]), axis off;
+text(0, 0, 'Training process (Window #)', 'FontSize', 12, 'FontWeight', 'bold');
+saveas(gcf,[save_fig_path,'Supplementary figure 2B.png'],'png');
+close
+figure(FigureIndex3)
+axes('position',[0.09 0.44, 0.1 0.1]), axis off;
+text(0, 0, '\DeltaPSE [deg]', 'FontSize', 12, 'FontWeight', 'bold', 'Rotation', 90);
+axes('position',[0.44 0.05, 0.1 0.1]), axis off;
+text(0, 0, 'Training process (Window #)', 'FontSize', 12, 'FontWeight', 'bold');
+saveas(gcf,[save_fig_path,'Supplementary figure 3B.png'],'png');
+close
+figure(FigureIndex4)
+axes('position',[0.09 0.44, 0.1 0.1]), axis off;
+text(0, 0, '\DeltaPSE [deg]', 'FontSize', 12, 'FontWeight', 'bold', 'Rotation', 90);
+axes('position',[0.44 0.05, 0.1 0.1]), axis off;
+text(0, 0, 'Training process (Window #)', 'FontSize', 12, 'FontWeight', 'bold');
+saveas(gcf,[save_fig_path,'Supplementary figure 4B.png'],'png');
+close
