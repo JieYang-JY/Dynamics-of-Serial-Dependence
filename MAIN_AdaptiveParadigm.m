@@ -346,7 +346,6 @@ LogRegModel_monks.monkey = monkey;
 LogRegModel_monks.modality = mod;
 LogRegModel_monks.model = cell(length(monkey), length(mod));
 LogRegModel_monks.Betas_SE_t_Ps = cell(length(monkey), length(mod));
-LogRegModel_monks.P_BonfCorr = cell(length(monkey), length(mod));
 for k = 1:length(monkey) % per monkey
     clear all_data
     switch k
@@ -385,7 +384,6 @@ for k = 1:length(monkey) % per monkey
             Betas_SE_t_Ps = table2array(mdl_glmfit.Coefficients);
             LogRegModel_monks.model{k,m} = mdl_glmfit;
             LogRegModel_monks.Betas_SE_t_Ps{k,m} = Betas_SE_t_Ps;
-            LogRegModel_monks.P_BonfCorr{k,m} = Betas_SE_t_Ps(end-1:end, 4) * 2; % only interested in the coefficients of history factors
         end
     end
 end
@@ -421,7 +419,6 @@ MixEff_LogRegModel.monkey = monkey;
 MixEff_LogRegModel.modality = mod;
 MixEff_LogRegModel.model = cell(length(mod),1);
 MixEff_LogRegModel.Betas_SE_t_Ps = cell(length(mod),1);
-MixEff_LogRegModel.P_BonfCorr = cell(length(mod),1);
 
 currChoice_mod = cell(length(mod),1);
 currStim_mod = cell(length(mod),1);
@@ -439,7 +436,6 @@ for m = 1:length(mod) % per modality
 end
 glme = cell(length(mod), 1);
 Betas_SE_t_Ps = cell(length(mod), 1);
-P_BonfCorr = cell(length(mod), 1);
 for m = 1:length(mod)
 
     disp(['modeling ',mod{m}, ' data...'])
@@ -454,12 +450,10 @@ for m = 1:length(mod)
     glme{m} = fitglme(input,'currCho ~ 1 + currStim + prevStim + prevCho + (1 + currStim + prevStim + prevCho|monkey)', ...
         'Distribution','Binomial','Link','logit','FitMethod','Laplace'); % running ~40 s.
     Betas_SE_t_Ps{m} = [glme{m}.Coefficients(:,2:4) glme{m}.Coefficients(:,6)];
-    P_BonfCorr{m} = table2array(dataset2table(Betas_SE_t_Ps{m}(end-1:end, 4))) * 2; % only interested in the coefficients of history factors
 
 end
 MixEff_LogRegModel.model = glme;
 MixEff_LogRegModel.Betas_SE_t_Ps = Betas_SE_t_Ps;
-MixEff_LogRegModel.P_BonfCorr = P_BonfCorr;
 
 
 save_results_path = strcat(currDir,'\Results\Adaptive paradigm\');
